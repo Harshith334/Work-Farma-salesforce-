@@ -1,0 +1,47 @@
+BillingReportPDF
+<apex:page controller="BillingExportController" renderAs="pdf">
+    <h1>Billing Report</h1>
+    <apex:repeat value="{!billingRecords}" var="billing">
+        <h2>Billing Record</h2>
+        <p>Farm Worker: {!billing.FarmWorker__r.Name}</p>
+        <p>Billing Amount: {!billing.Billing_Amount__c}</p>
+        <p>Billing Date: {!billing.Billing_Date__c}</p>
+        <p>Status: {!billing.Billing_status__c}</p>
+
+        <!-- Rental Item Details -->
+        <h3>Rental Item Details</h3>
+        <p>Rental Item: {!billing.Rental_Item__r.Name}</p>
+        <p>Available From: {!billing.Rental_Item__r.Available_on__c}</p>
+        <p>Available Until: {!billing.Rental_Item__r.Available_end_date__c}</p>
+
+        <!-- Work Opportunity Details -->
+        <h3>Work Opportunity Details</h3>
+        <p>Work Opportunity: {!billing.work_oppo__r.Name}</p>
+        <p>Field Work: {!billing.work_oppo__r.work__c}</p>
+
+        <hr/>
+    </apex:repeat>
+</apex:page>
+
+//BillingExportcontroller
+
+public with sharing class BillingExportController {
+    // This should be public so Visualforce can access it
+    public List<Billing__c> billingRecords { get; set; }
+
+    // Constructor to query the billing data
+    public BillingExportController() {
+        billingRecords = [
+            SELECT Id, Billing_Amount__c, Billing_Date__c,Billing_status__c,
+                   FarmWorker__r.Name, 
+                   Rental_Item__r.Name, 
+                   Rental_Item__r.Available_on__c, 
+                   Rental_Item__r.Available_end_date__c, 
+                   Work_Oppo__r.Name,
+                   Work_Oppo__r.work__c
+            FROM Billing__c
+            WHERE Billing_status__c = 'completed'
+            ORDER BY Billing_Date__c DESC
+        ];
+    }
+}
