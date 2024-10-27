@@ -1,0 +1,42 @@
+trigger UpdateRentalItemStatusOnBooking on Farmworker__c (after insert, after update) {
+    // Set of Rental Item IDs that need to be updated
+    Set<Id> rentalItemIdsToUpdate = new Set<Id>();
+    
+    // Iterate through the farm workers being inserted or updated
+    for (Farmworker__c worker : Trigger.new) {
+        
+        // Check if there is a Rental Item associated with the farm worker
+        Id rentalItemId = worker.Rental_Item__c;
+        
+        // Proceed if this is a new booking or change to an existing booking
+        if (rentalItemId != null && 
+            (Trigger.isInsert || 
+             (Trigger.isUpdate && Trigger.oldMap.get(worker.Id).Rental_Item__c != rentalItemId))) {
+            
+            // Add the Rental Item ID to the set to be updated
+            rentalItemIdsToUpdate.add(rentalItemId);
+        }
+    }
+
+    // Update the Rental Items to 'Booked' status if there are records to update
+    if (!rentalItemIdsToUpdate.isEmpty()) {
+        List<Rental_Item__c> rentalItemsToUpdate = [
+            SELECT Id, status__c
+            FROM Rental_Item__c
+            WHERE Id IN :rentalItemIdsToUpdate
+        ];
+
+        // Loop through each rental item and set the status to 'Booked'
+        for (Rental_Item__c rentalItem : rentalItemsToUpdate) {
+            rentalItem.status__c = 'booked'; // Ensure 'Booked' matches your picklist option exactly
+        }
+
+        // Perform the update
+        try {
+            update rentalItemsToUpdate;
+        } catch (DmlException e) {
+            // Log error if update fails
+            System.debug('Failed to update Rental_Item__c status to Booked: ' + e.getMessage());
+        }
+    }
+}
