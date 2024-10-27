@@ -1,0 +1,50 @@
+//This class helps in marking status of work opportunity as booked after the availability of memebers are reached
+
+public class WorkOpportunityHelper {
+    
+    public static void updateWorkOppoAvailability(List<Farmworker__c> workers) {
+        Set<Id> workOppoIds = new Set<Id>();
+
+        // Collect all work opportunity IDs from the workers
+        for (Farmworker__c worker : workers) {
+            if (worker.work_oppo__c != null) {
+                workOppoIds.add(worker.work_oppo__c);
+            }
+        }
+
+        // Query the work opportunities that need to be updated
+        List<work_oppo__c> workOpposToUpdate = [
+            SELECT Id, Availability_of_memebers__c, status__c, End_date__c
+            FROM work_oppo__c
+            WHERE Id IN :workOppoIds
+        ];
+
+        for (work_oppo__c workOppo : workOpposToUpdate) {
+            try {
+                // Logic to determine status based on availability and end date
+                if (workOppo.End_date__c < Date.today()) {
+                    // If the end date has passed, set status to Unavailable
+                    workOppo.status__c = 'Unavailable'; 
+                } else {
+                    // If availability is greater than 0, keep it Available
+                    if (workOppo.Availability_of_memebers__c > 0) {
+                        workOppo.status__c = 'Available';
+                        workOppo.Availability_of_memebers__c -= 1; // Decrement available members for the booking
+                    }
+
+                    // Check if availability reached zero after decrement
+                    if (workOppo.Availability_of_memebers__c == 0) {
+                        workOppo.status__c = 'Booked'; // Change status to Booked if no members available
+                    }
+                }
+            } catch (Exception e) {
+                System.debug('Error updating Work Opportunity ID: ' + workOppo.Id + ' - Error Message: ' + e.getMessage());
+            }
+        }
+
+        // Perform a DML update on the modified work opportunities
+        if (!workOpposToUpdate.isEmpty()) {
+            update workOpposToUpdate;
+        }
+    }
+}
